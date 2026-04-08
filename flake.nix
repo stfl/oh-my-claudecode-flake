@@ -1,7 +1,7 @@
 {
   description = "oh-my-claudecode (oh-my-claude-sisyphus) packaged for NixOS";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
 
   outputs = {
     self,
