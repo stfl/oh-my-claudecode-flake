@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  flake-check:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix flake check --no-build
+
+  build:
+    name: Build and smoke-test binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build package
+        run: nix build .#omc
+
+      - name: All expected binaries are present
+        run: |
+          for bin in omc oh-my-claudecode omc-cli omc-hud; do
+            test -e result/bin/$bin || { echo "MISSING: $bin"; exit 1; }
+            echo "OK: $bin"
+          done
+
+      - name: omc --version matches flake.nix
+        run: |
+          FLAKE_VER=$(grep 'version = "' flake.nix | head -1 | sed 's/.*version = "\(.*\)";.*/\1/')
+          BIN_VER=$(result/bin/omc --version)
+          echo "flake.nix: $FLAKE_VER  binary: $BIN_VER"
+          [ "$FLAKE_VER" = "$BIN_VER" ] || { echo "VERSION MISMATCH"; exit 1; }
+
+      - name: omc --help exits cleanly
+        run: result/bin/omc --help
+
+      - name: omc-hud produces output
+        run: |
+          OUTPUT=$(echo '{}' | result/bin/omc-hud)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q '\[OMC' || { echo "Expected [OMC in output"; exit 1; }
+
+  overlay:
+    name: Overlay evaluates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Overlay exposes oh-my-claudecode.omc
+        run: |
+          nix eval .#overlays.default \
+            --apply 'overlay: (overlay {} {}).oh-my-claudecode ? omc' \
+            --json \
+          | grep -q true || { echo "Overlay missing oh-my-claudecode.omc"; exit 1; }
+          echo "Overlay OK"
