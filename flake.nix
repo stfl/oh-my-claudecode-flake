@@ -52,10 +52,23 @@
           mainProgram = "omc";
         };
       };
+    pkgs = nixpkgs.legacyPackages.${system};
+
+    updateScript = pkgs.writeShellApplication {
+      name = "update-oh-my-claudecode";
+      runtimeInputs = [pkgs.curl pkgs.jq pkgs.nix];
+      text = builtins.readFile ./update.sh;
+    };
   in {
     packages.${system} = {
-      default = mkOmcPkg nixpkgs.legacyPackages.${system};
-      omc = mkOmcPkg nixpkgs.legacyPackages.${system};
+      default = mkOmcPkg pkgs;
+      omc = mkOmcPkg pkgs;
+      update = updateScript;
+    };
+
+    apps.${system}.update = {
+      type = "app";
+      program = "${updateScript}/bin/update-oh-my-claudecode";
     };
 
     overlays.default = final: prev: {
