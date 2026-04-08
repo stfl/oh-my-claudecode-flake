@@ -21,7 +21,7 @@ jobs:
       - name: Run update script
         run: nix run .#update
 
-      - name: Commit and push if changed
+      - name: Commit, tag, and push if changed
         run: |
           if git diff --quiet flake.nix flake.lock; then
             echo "Already up to date."
@@ -32,4 +32,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add flake.nix flake.lock
           git commit -m "chore: update oh-my-claude-sisyphus to ${VERSION}"
+          git tag "v${VERSION}"
           git push
+          git push origin "v${VERSION}"
