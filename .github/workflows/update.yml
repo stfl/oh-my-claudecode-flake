@@ -1,0 +1,35 @@
+name: Update oh-my-claudecode
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # Daily at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run update script
+        run: nix run .#update
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet flake.nix flake.lock; then
+            echo "Already up to date."
+            exit 0
+          fi
+          VERSION=$(grep 'version = "' flake.nix | head -1 | sed 's/.*version = "\(.*\)";.*/\1/')
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add flake.nix flake.lock
+          git commit -m "chore: update oh-my-claude-sisyphus to ${VERSION}"
+          git push
