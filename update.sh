@@ -4,9 +4,6 @@ set -euo pipefail
 PACKAGE="oh-my-claude-sisyphus"
 REGISTRY="https://registry.npmjs.org"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-
 echo "Fetching latest version of ${PACKAGE}..."
 LATEST=$(curl -fsSL "${REGISTRY}/${PACKAGE}/latest" | jq -r '.version')
 CURRENT=$(grep 'version = "' flake.nix | head -1 | sed 's/.*version = "\(.*\)";.*/\1/')
