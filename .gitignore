@@ -1,3 +1,5 @@
 result
 result-*
 /.omc/
+/osv-report.json
+/vulnix-report.json
