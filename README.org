@@ -1,0 +1,191 @@
+#+TITLE: oh-my-claudecode Installation Guide
+#+AUTHOR: stfl
+
+This document describes how to install and configure ~oh-my-claudecode~ (omc) in your NixOS configuration.
+
+* Table of Contents
+:PROPERTIES:
+:TOC:      :include all :depth 2
+:END:
+:CONTENTS:
+- [[#flake-input][Flake Input]]
+- [[#overlay][Overlay]]
+- [[#installing-the-binary][Installing the Binary]]
+- [[#home-manager-plugin][Home-Manager Plugin]]
+- [[#statusline-configuration][StatusLine Configuration]]
+- [[#complete-example][Complete Example]]
+:END:
+
+* Flake Input
+
+Add ~oh-my-claudecode~ to your flake inputs:
+
+#+begin_src nix
+{
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    
+    oh-my-claudecode.url = "https://flakehub.com/f/stfl/oh-my-claudecode/*";
+  };
+
+  outputs = { self, nixpkgs, oh-my-claudecode, ... }@inputs: {
+    # your outputs
+  };
+}
+#+end_src
+
+The flake is published on [[https://flakehub.com/flake/stfl/oh-my-claudecode][FlakeHub]] and uses semantic versioning.
+
+* Overlay
+
+Apply the overlay to make ~oh-my-claudecode~ packages available in ~pkgs~:
+
+**Option 1: System-wide overlay** (recommended)
+
+In your NixOS configuration module:
+
+#+begin_src nix
+{ oh-my-claudecode, ... }:
+{
+  nixpkgs.overlays = [
+    oh-my-claudecode.overlays.default
+  ];
+}
+#+end_src
+
+**Option 2: Per-package access**
+
+Access packages directly from the flake output:
+
+#+begin_src nix
+{ pkgs, oh-my-claudecode, ... }:
+let
+  system = "x86_64-linux";
+in
+{
+  environment.systemPackages = [
+    oh-my-claudecode.packages.${system}.omc
+  ];
+}
+#+end_src
+
+* Installing the Binary
+
+Once the overlay is applied, install the binary via ~home.packages~ or ~environment.systemPackages~:
+
+#+begin_src nix
+{ pkgs, ... }:
+{
+  home.packages = with pkgs; [
+    oh-my-claudecode.omc
+  ];
+}
+#+end_src
+
+The package provides three binaries:
+- ~omc~ - Main CLI tool
+- ~oh-my-claudecode~ - Alias for ~omc~
+- ~omc-cli~ - Alias for ~omc~
+- ~omc-hud~ - Statusline HUD binary
+
+* Home-Manager Plugin
+
+To enable the oh-my-claudecode plugin in Claude Code via home-manager:
+
+#+begin_src nix
+{ pkgs, ... }:
+{
+  programs.claude-code = {
+    enable = true;
+    plugins = [
+      "${pkgs.oh-my-claudecode.omc}/lib/oh-my-claudecode"
+    ];
+  };
+}
+#+end_src
+
+The plugin path points to the package's lib directory where the plugin files are located.
+
+* StatusLine Configuration
+
+Configure the statusLine to use ~omc-hud~ via ~home-manager.programs.claude-code.settings~:
+
+#+begin_src nix
+{ pkgs, ... }:
+{
+  programs.claude-code = {
+    enable = true;
+    settings = {
+      statusLine = {
+        type = "command";
+        command = "omc-hud";
+      };
+    };
+  };
+}
+#+end_src
+
+*Note:* The statusLine can also be configured via ~settings.json~ (as shown in the dotfiles at ~config/claude/settings.json~).
+
+* Complete Example
+
+A complete NixOS/home-manager configuration integrating all components:
+
+**flake.nix:**
+#+begin_src nix
+{
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    home-manager.url = "https://flakehub.com/f/nix-community/home-manager/0.1";
+    oh-my-claudecode.url = "https://flakehub.com/f/stfl/oh-my-claudecode/*";
+  };
+
+  outputs = { self, nixpkgs, home-manager, oh-my-claudecode, ... }@inputs: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = inputs;
+      modules = [
+        ./configuration.nix
+        home-manager.nixosModules.home-manager
+      ];
+    };
+  };
+}
+#+end_src
+
+**configuration.nix:**
+#+begin_src nix
+{ oh-my-claudecode, ... }:
+{
+  # Apply the overlay system-wide
+  nixpkgs.overlays = [
+    oh-my-claudecode.overlays.default
+  ];
+
+  # Enable home-manager
+  home-manager.users.stefan = import ./home.nix;
+}
+#+end_src
+
+**home.nix:**
+#+begin_src nix
+{ pkgs, ... }:
+{
+  home.packages = with pkgs; [
+    oh-my-claudecode.omc
+  ];
+
+  programs.claude-code = {
+    enable = true;
+    plugins = [
+      "${pkgs.oh-my-claudecode.omc}/lib/oh-my-claudecode"
+    ];
+    settings = {
+      statusLine = {
+        type = "command";
+        command = "omc-hud";
+      };
+    };
+  };
+}
+#+end_src
