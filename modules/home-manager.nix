@@ -8,11 +8,8 @@
   jsonFormat = pkgs.formats.json {};
 
   # Defaults mirror what `/omc-setup` writes to `~/.claude/.omc-config.json`
-  # when the user picks the recommended options:
-  #   - skills/omc-setup/phases/02-configure.md (defaultExecutionMode, taskTool,
-  #     taskToolConfig)
-  #   - scripts/setup-progress.sh (setupVersion — marks the config as
-  #     configured without needing a non-reproducible setupCompleted timestamp)
+  # when the user picks the recommended options. See
+  # skills/omc-setup/phases/02-configure.md for the source of truth.
   defaultSettings = {
     defaultExecutionMode = "ultrawork";
     taskTool = "builtin";
@@ -20,7 +17,6 @@
       injectInstructions = true;
       useMcp = false;
     };
-    setupVersion = cfg.package.version or "";
   };
 in {
   options.programs.oh-my-claudecode = {
@@ -79,7 +75,7 @@ in {
         defaults `/omc-setup` would write (see `defaultText`) via
         `mkDefault` in the module's `config`, so user-supplied attributes
         merge on top at the *top level* — overriding `defaultExecutionMode`
-        keeps `taskTool`, `taskToolConfig`, and `setupVersion` intact.
+        keeps `taskTool` and `taskToolConfig` intact.
 
         Nested attrsets (e.g. `taskToolConfig`) are opaque values in
         `pkgs.formats.json`, so overriding them replaces the whole block;
