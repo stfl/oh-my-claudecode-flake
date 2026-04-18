@@ -11,7 +11,8 @@ This document describes how to install and configure ~oh-my-claudecode~ (omc) in
 - [[#flake-input][Flake Input]]
 - [[#overlay][Overlay]]
 - [[#installing-the-binary][Installing the Binary]]
-- [[#home-manager-plugin][Home-Manager Plugin]]
+- [[#home-manager-module-recommended][Home-Manager Module (Recommended)]]
+- [[#home-manager-plugin][Home-Manager Plugin (Manual)]]
 - [[#statusline-configuration][StatusLine Configuration]]
 - [[#complete-example][Complete Example]]
 :END:
@@ -88,9 +89,65 @@ The package provides three binaries:
 - ~omc-cli~ - Alias for ~omc~
 - ~omc-hud~ - Statusline HUD binary
 
-* Home-Manager Plugin
+* Home-Manager Module (Recommended)
 
-To enable the oh-my-claudecode plugin in Claude Code via home-manager:
+The flake exposes a home-manager module at
+~oh-my-claudecode.homeManagerModules.default~ that wires up the omc
+plugin, the bundled OMC rules + ~omc-reference~ skill, the ~omc-hud~
+statusline, and writes ~~/.claude/.omc-config.json~ so that running
+~/omc-setup~ on first launch is no longer required.
+
+Import it from your home-manager configuration:
+
+#+begin_src nix
+{ oh-my-claudecode, ... }:
+{
+  imports = [
+    oh-my-claudecode.homeManagerModules.default
+  ];
+
+  programs.oh-my-claudecode.enable = true;
+}
+#+end_src
+
+This single switch enables ~programs.claude-code~ as well, installs the
+~omc~ binary, registers the plugin directory, sets the ~omc-hud~
+statusline, and drops a sane ~.omc-config.json~ into
+~~/.claude/~.
+
+Available options under ~programs.oh-my-claudecode~:
+
+- ~enable~ — turn the module on.
+- ~package~ — override the omc package (default: ~pkgs.oh-my-claudecode.omc~).
+- ~enablePlugin~ — register the plugin with ~programs.claude-code.plugins~ (default: true).
+- ~enableSkills~ — register the bundled ~omc-reference~ skill (default: true).
+- ~enableRules~ — register the bundled OMC rules (~docs/CLAUDE.md~) (default: true).
+- ~enableStatusLine~ — set ~settings.statusLine~ to ~omc-hud~ (default: true).
+- ~settings~ — attribute set merged on top of the default ~.omc-config.json~ contents (always installed to ~~/.claude/.omc-config.json~).
+
+See the upstream [[https://github.com/Yeachan-Heo/oh-my-claudecode/blob/main/docs/REFERENCE.md][oh-my-claudecode REFERENCE.md]] for the full list of
+~.omc-config.json~ keys and their effects.
+
+Example with overrides:
+
+#+begin_src nix
+{
+  imports = [ oh-my-claudecode.homeManagerModules.default ];
+
+  programs.oh-my-claudecode = {
+    enable = true;
+    settings = {
+      team.maxAgents = 5;
+      taskTool = "builtin";
+    };
+  };
+}
+#+end_src
+
+* Home-Manager Plugin (Manual)
+
+If you prefer to wire things up by hand instead of using the module
+above, enable the oh-my-claudecode plugin in Claude Code directly:
 
 #+begin_src nix
 { pkgs, ... }:
@@ -169,23 +226,12 @@ A complete NixOS/home-manager configuration integrating all components:
 
 **home.nix:**
 #+begin_src nix
-{ pkgs, ... }:
+{ oh-my-claudecode, ... }:
 {
-  home.packages = with pkgs; [
-    oh-my-claudecode.omc
+  imports = [
+    oh-my-claudecode.homeManagerModules.default
   ];
 
-  programs.claude-code = {
-    enable = true;
-    plugins = [
-      "${pkgs.oh-my-claudecode.omc}/lib/oh-my-claudecode"
-    ];
-    settings = {
-      statusLine = {
-        type = "command";
-        command = "omc-hud";
-      };
-    };
-  };
+  programs.oh-my-claudecode.enable = true;
 }
 #+end_src

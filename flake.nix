@@ -76,5 +76,10 @@
         omc = mkOmcPkg final;
       };
     };
+
+    homeManagerModules = {
+      default = ./modules/home-manager.nix;
+      oh-my-claudecode = ./modules/home-manager.nix;
+    };
   };
 }
