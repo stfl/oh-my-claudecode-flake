@@ -33,13 +33,13 @@ The flake exposes `packages.x86_64-linux.{default,omc,update}`, an `apps.update`
 
 ## Update Flow
 
-Version bumps are fully automated:
+This flake is a rolling release — every push to `main` is published to FlakeHub as a new rolling version. No tags.
 
-1. `update.sh` (invoked via `nix run .#update`): reads current `version` from `flake.nix`, queries `registry.npmjs.org/oh-my-claude-sisyphus/latest`, runs `nix-prefetch-url` on the new tarball, `sed`-rewrites `version = "..."` and `hash = "sha256-..."` in-place, then `nix flake update nixpkgs`.
-2. `.github/workflows/update.yml` (daily cron + manual): runs the update, and if `flake.nix`/`flake.lock` changed commits as `chore: update oh-my-claude-sisyphus to ${VERSION}`, tags `v${VERSION}`, pushes both, then dispatches `flakehub-publish-tagged.yml` with that tag.
-3. `.github/workflows/flakehub-publish-tagged.yml` (triggered by the tag push or workflow_dispatch): publishes to FlakeHub as `stfl/oh-my-claudecode`.
+1. `update.sh` (invoked via `nix run .#update`): reads current `version` from `flake.nix`, queries `registry.npmjs.org/oh-my-claude-sisyphus/latest`, runs `nix-prefetch-url` on the new tarball, `sed`-rewrites `version = "..."` and `hash = "sha256-..."` in-place, then `nix flake update nixpkgs`. The `version` field in `flake.nix` tracks the upstream npm package version (for the `--version` smoke test); it is not a git/flake release tag.
+2. `.github/workflows/update.yml` (daily cron + manual): runs the update, and if `flake.nix`/`flake.lock` changed commits as `chore: update oh-my-claude-sisyphus to ${VERSION}`, pushes to `main`, then dispatches `flakehub-publish.yml`. The manual dispatch is required because GitHub does not trigger workflows from pushes made with `GITHUB_TOKEN`.
+3. `.github/workflows/flakehub-publish.yml` (triggered by push to `main`, manual, or `workflow_dispatch` from `update.yml`): publishes a rolling release to FlakeHub as `stfl/oh-my-claudecode` via `flakehub-push` with `rolling: true`.
 
-Manual releases: bump `version` + `hash` in `flake.nix`, commit, `git tag vX.Y.Z && git push --tags`. The tag pattern `v?[0-9]+.[0-9]+.[0-9]+*` triggers FlakeHub publish automatically.
+Manual releases: bump `version` + `hash` in `flake.nix` and push to `main` — push from a human/PAT fires `flakehub-publish.yml` automatically.
 
 The `update.sh` script relies on the `sed` patterns matching exactly one `version = "..."` and one `hash = "sha256-..."` line — if you add other strings of those shapes to `flake.nix`, the updater will corrupt the file.
 

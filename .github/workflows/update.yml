@@ -22,7 +22,7 @@ jobs:
       - name: Run update script
         run: nix run .#update
 
-      - name: Commit, tag, and push if changed
+      - name: Commit and push if changed
         id: commit
         run: |
           if git diff --quiet flake.nix flake.lock; then
@@ -35,17 +35,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add flake.nix flake.lock
           git commit -m "chore: update oh-my-claude-sisyphus to ${VERSION}"
-          git tag "v${VERSION}"
           git push
-          git push origin "v${VERSION}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Trigger FlakeHub publish workflow
         if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run flakehub-publish-tagged.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            -f tag="v${{ steps.commit.outputs.version }}"
+        run: gh workflow run flakehub-publish.yml --repo "$GITHUB_REPOSITORY"
