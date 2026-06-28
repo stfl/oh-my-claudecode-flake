@@ -17,11 +17,11 @@
     mkOmcPkg = pkgs:
       pkgs.stdenv.mkDerivation rec {
         pname = "oh-my-claude-sisyphus";
-        version = "4.15.0";
+        version = "4.15.1";
 
         src = pkgs.fetchurl {
           url = "https://registry.npmjs.org/oh-my-claude-sisyphus/-/oh-my-claude-sisyphus-${version}.tgz";
-          hash = "sha256-WuTWbhavmhBrqruobFZ9yaoD+TOjG1LLjhxhdZzIWsw=";
+          hash = "sha256-es3XqSY6TMWHqDU7n4IrBxHkxGSEW4htV2Pzel4gsTs=";
         };
 
         nativeBuildInputs = [pkgs.makeWrapper];
