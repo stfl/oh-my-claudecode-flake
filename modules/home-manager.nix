@@ -91,6 +91,48 @@ in {
         }
       '';
     };
+
+    runtimeConfig = lib.mkOption {
+      inherit (jsonFormat) type;
+      default = {};
+      description = ''
+        Contents of `~/.config/claude-omc/config.jsonc`, the file read by
+        OMC's runtime configuration loader (`config/loader.js`).
+
+        This is a **separate config surface** from
+        {option}`programs.oh-my-claudecode.settings`, which writes
+        `~/.claude/.omc-config.json` (the setup/installer/auto-update
+        config: `taskTool`, `defaultExecutionMode`, `notifications`, …).
+        The two files are read by different code paths; a key placed in the
+        wrong file is ignored (and flagged by `omc doctor`).
+
+        Use `runtimeConfig` for runtime/feature configuration. Several keys
+        live **only** here and are not valid in `.omc-config.json`:
+        `autopilot` (e.g. `autopilot.execution = "team"` to run autopilot's
+        execution stage through the tmux CLI team runtime by default),
+        `companyContext`, `planOutput`, `teleport`, `startupCodebaseMap`,
+        `taskSizeDetection`, and `promptPrerequisites`. Keys such as
+        `agents` (per-agent model overrides), `routing`, `features`,
+        `mcpServers`, `permissions`, `magicKeywords`, and `team` are also
+        honoured here.
+
+        The loader deep-merges this over its built-in defaults at runtime,
+        so specify only the keys you want to change. Unlike `settings`, the
+        module supplies no defaults — the value is written verbatim, and
+        when left empty no file is written (the loader's built-in defaults
+        apply). Emitted as strict JSON, which is valid JSONC.
+
+        See the upstream reference for the full schema:
+        <https://github.com/Yeachan-Heo/oh-my-claudecode/blob/main/docs/REFERENCE.md>
+      '';
+      example = lib.literalExpression ''
+        {
+          autopilot.execution = "team";
+          companyContext.onError = "warn";
+          routing.defaultTier = "HIGH";
+        }
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -123,5 +165,13 @@ in {
 
     home.file.".claude/.omc-config.json".source =
       jsonFormat.generate "omc-config.json" cfg.settings;
+
+    # Runtime loader config (`config/loader.js`) — resolved via
+    # `XDG_CONFIG_HOME`, which `xdg.configFile` targets. Only written when the
+    # user sets something, so an empty config leaves the loader on its
+    # built-in defaults instead of shadowing them with an empty file.
+    xdg.configFile."claude-omc/config.jsonc" = lib.mkIf (cfg.runtimeConfig != {}) {
+      source = jsonFormat.generate "claude-omc-config.jsonc" cfg.runtimeConfig;
+    };
   };
 }
